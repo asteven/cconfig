@@ -19,6 +19,7 @@ import logging
 logging.basicConfig(level=logging.DEBUG, format='%(levelname)s: %(message)s')
 log = logging.getLogger(__name__)
 
+
 class CconfigError(Exception):
     pass
 
@@ -51,9 +52,6 @@ class CconfigSchema(object):
             else:
                 raise
 
-
-
-import collections
 
 class Cconfig(collections.MutableMapping):
     def __init__(self, schema=None, strict=False):
