@@ -178,7 +178,8 @@ class Cconfig(collections.MutableMapping):
             os.mkdir(base_path)
         log.debug('Saving cconfig object to: {}'.format(base_path))
         for key,value in self.items():
-            log.debug('{} = {}'.format(key, value))
+            path = os.path.join(base_path, key)
+            log.debug('{} {} = {} {}'.format(path, key, value, type(value)))
 
             if key not in self.schema:
                 if self.enforce_schema:
@@ -187,9 +188,6 @@ class Cconfig(collections.MutableMapping):
                     log.debug('ignoring unknown key: {}'.format(key))
                     continue
 
-            log.debug('type: {}'.format(type(value)))
-            path = os.path.join(base_path, key)
-            log.debug('path: {}'.format(path))
             if isinstance(value, Cconfig):
                 # value is a cconfig object, delegate serialization to it
                 value.to_dir(path)
