@@ -24,13 +24,13 @@ import logging
 log = logging.getLogger(__name__)
 
 
-class CconfigError(Exception):
+class Error(Exception):
     pass
 
 
 SchemaItem = collections.namedtuple('SchemaItem', ('type', 'subschema'))
 
-class CconfigSchema(object):
+class Schema(object):
     """
     schema_decl = (
         # path, type, subschema
@@ -84,7 +84,7 @@ class CconfigSchema(object):
 
 class Cconfig(collections.MutableMapping):
     def __init__(self, schema=None, enforce_schema=False, ignore_unknown=False):
-        self.schema = schema or CconfigSchema()
+        self.schema = schema or Schema()
         if enforce_schema and ignore_unknown:
             log.warn('enforce_schema overrides ignore_unkown')
         self.enforce_schema = enforce_schema
@@ -150,7 +150,7 @@ class Cconfig(collections.MutableMapping):
 
             if key not in self.schema:
                 if self.enforce_schema:
-                    raise CconfigError('Unknown key not defined in schema: {}'.format(key))
+                    raise Error('Unknown key not defined in schema: {} ({})'.format(key, path))
                 elif self.ignore_unknown:
                     log.debug('ignoring unknown key: {}'.format(key))
                     continue
@@ -165,7 +165,7 @@ class Cconfig(collections.MutableMapping):
                 try:
                     schema = self.schema[key]
                     # create new child cconfig object and dispatch parsing/loading to it
-                    o = self.__class__(CconfigSchema(schema.subschema), enforce_schema=self.enforce_schema, ignore_unknown=self.ignore_unknown)
+                    o = self.__class__(Schema(schema.subschema), enforce_schema=self.enforce_schema, ignore_unknown=self.ignore_unknown)
                     o.from_dir(path)
                     self._data[key] = o
                 except KeyError:
@@ -182,7 +182,7 @@ class Cconfig(collections.MutableMapping):
 
             if key not in self.schema:
                 if self.enforce_schema:
-                    raise CconfigError('Unknown key not defined in schema: {}'.format(key))
+                    raise Error('Unknown key not defined in schema: {}'.format(key))
                 elif self.ignore_unknown:
                     log.debug('ignoring unknown key: {}'.format(key))
                     continue
@@ -196,7 +196,7 @@ class Cconfig(collections.MutableMapping):
             elif isinstance(value, collections.MutableMapping):
                 # value is a dictionary, create a cconfig object and delegate serialization to it
                 schema = self.get_schema(key)
-                o = self.__class__(CconfigSchema(schema.subschema), enforce_schema=self.enforce_schema, ignore_unknown=self.ignore_unknown)
+                o = self.__class__(Schema(schema.subschema), enforce_schema=self.enforce_schema, ignore_unknown=self.ignore_unknown)
                 o.update(value)
                 o.to_dir(path)
             elif isinstance(value, bool):
@@ -210,46 +210,3 @@ class Cconfig(collections.MutableMapping):
                 # just save as string
                 if value:
                     self.__write(path, value)
-
-
-def main(path):
-    schema_decl = (
-        # path, type, subschema
-        ('changed', bool),
-        ('code-remote', str),
-        ('source', str),
-        ('explorer', dict, (
-            ('state', str),
-        )),
-        ('parameter', dict, (
-            ('state', str),
-        )),
-        ('state', str),
-    )
-
-    schema = CconfigSchema(schema_decl)
-
-    c = Cconfig(schema)
-    c.from_dir(path)
-    print(c)
-    #c['changed'] = True
-    #print('changed: ', c['changed'])
-    #print('state: ', c['state'])
-    #print('parameter[\'state\']: ', c['parameter']['state'])
-    #print('explorer[\'state\']: ', c['explorer']['state'])
-    #print(c)
-    import tempfile
-    tmpdir = tempfile.mkdtemp()
-    print('tmpdir: ', tmpdir)
-    c.to_dir(tmpdir)
-
-if __name__ == '__main__':
-    logging.basicConfig(level=logging.DEBUG, format='%(levelname)s: %(message)s')
-
-    import os.path as op
-    import sys
-    if len(sys.argv) > 1:
-        test_dir = op.abspath(sys.argv[1])
-    else:
-        test_dir = op.abspath(op.join(op.dirname(__file__), 'cconfig_dir'))
-    main(test_dir)
