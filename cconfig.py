@@ -21,7 +21,6 @@ data types:
 import os
 import collections
 import logging
-logging.basicConfig(level=logging.DEBUG, format='%(levelname)s: %(message)s')
 log = logging.getLogger(__name__)
 
 
@@ -29,9 +28,33 @@ class CconfigError(Exception):
     pass
 
 
-SchemaItem = collections.namedtuple('SchemaItem', ('type_', 'subschema'))
+SchemaItem = collections.namedtuple('SchemaItem', ('type', 'subschema'))
 
 class CconfigSchema(object):
+    """
+    schema_decl = (
+        # path, type, subschema
+        ('changed', bool),
+        ('code-remote', str),
+        ('source', str),
+        ('explorer', dict, (
+            ('state', str),
+        )),
+        ('parameter', dict, (
+            ('state', str),
+        )),
+        ('require', SomeCustomType),
+        ('nested', dict, (
+            ('first', str),
+            ('second', int),
+            ('third', dict, None, (
+                ('alist', list),
+                ('adict', dict),
+            )),
+        )),
+    )
+
+    """
     def __init__(self, schema=None):
         self._schema = schema or ()
         self._schema_map = {}
@@ -44,7 +67,7 @@ class CconfigSchema(object):
                 key, type_ = entry
             elif len(entry) == 3:
                 key, type_, subschema = entry
-            self._schema_map[key] = SchemaItem(type_=type_, subschema=subschema)
+            self._schema_map[key] = SchemaItem(type=type_, subschema=subschema)
 
     def __contains__(self, key):
         return key in self._schema_map
@@ -61,11 +84,6 @@ class CconfigSchema(object):
 
 class Cconfig(collections.MutableMapping):
     def __init__(self, schema=None, enforce_schema=False, ignore_unknown=False):
-        """
-        TODO: allow schema to be:
-            - strictly verified against
-            - ignore unkown keys
-        """
         self.schema = schema or CconfigSchema()
         if enforce_schema and ignore_unknown:
             log.warn('enforce_schema overrides ignore_unkown')
@@ -118,13 +136,13 @@ class Cconfig(collections.MutableMapping):
             return self.schema[key]
         except KeyError:
             if not self.enforce_schema:
-                return SchemaItem(type_=str, subschema=None)
+                return SchemaItem(type=str, subschema=None)
             else:
-                # FIXME: wrap in custom exception
                 raise
 
     def from_dir(self, base_path):
-        log.debug('from_dir: %s', base_path)
+        self.clear()
+        log.debug('Loading cconfig object from: %s', base_path)
         for key in os.listdir(base_path):
             log.debug('key: %s', key)
             path = os.path.join(base_path, key)
@@ -142,20 +160,23 @@ class Cconfig(collections.MutableMapping):
                 # read property value from file
                 value = self.__read(path)
                 log.debug('value: %s', value)
-                self._data[key] = schema.type_(value)
+                self._data[key] = schema.type(value)
             elif os.path.isdir(path):
-                schema = self.schema[key]
-                # create new child cconfig object and dispatch
-                o = self.__class__(CconfigSchema(schema.subschema), enforce_schema=self.enforce_schema, ignore_unknown=self.ignore_unknown)
-                o.from_dir(path)
-                self._data[key] = o
+                try:
+                    schema = self.schema[key]
+                    # create new child cconfig object and dispatch parsing/loading to it
+                    o = self.__class__(CconfigSchema(schema.subschema), enforce_schema=self.enforce_schema, ignore_unknown=self.ignore_unknown)
+                    o.from_dir(path)
+                    self._data[key] = o
+                except KeyError:
+                    log.warn('Could not find schema entry for directory, ignoring: {}'.format(key))
             else:
                 raise ValueError('File type of %s not supported'.format(path))
         
     def to_dir(self, base_path):
         if not os.path.isdir(base_path):
             os.mkdir(base_path)
-        log.debug('to_dir: %s', base_path)
+        log.debug('Saving cconfig object to: %s', base_path)
         for key,value in self.items():
             log.debug('%s = %s', key, value)
 
@@ -193,33 +214,22 @@ class Cconfig(collections.MutableMapping):
 
 def main(path):
     schema_decl = (
-        # path, type, reader/writer, subschema
+        # path, type, subschema
         ('changed', bool),
         ('code-remote', str),
         ('source', str),
         ('explorer', dict, (
             ('state', str),
         )),
-        ('parameter', dict),
-    #    ('parameter', dict, (
-    #        ('state', str),
-    #    )),
-        #('require', list, CdistDependcyEntry),
+        ('parameter', dict, (
+            ('state', str),
+        )),
         ('state', str),
-    #    ('nested', dict, None, (
-    #        ('first', str),
-    #        ('second', int),
-    #        ('third', dict, None, (
-    #            ('alist', list),
-    #            ('adict', dict),
-    #        )),
-    #    )),
     )
 
     schema = CconfigSchema(schema_decl)
 
     c = Cconfig(schema)
-    #c = Cconfig()
     c.from_dir(path)
     print(c)
     #c['changed'] = True
@@ -234,6 +244,8 @@ def main(path):
     c.to_dir(tmpdir)
 
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.DEBUG, format='%(levelname)s: %(message)s')
+
     import os.path as op
     import sys
     if len(sys.argv) > 1:
