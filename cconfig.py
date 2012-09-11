@@ -142,11 +142,11 @@ class Cconfig(collections.MutableMapping):
 
     def from_dir(self, base_path):
         self.clear()
-        log.debug('Loading cconfig object from: %s', base_path)
+        log.debug('Loading cconfig object from: {}'.format(base_path))
         for key in os.listdir(base_path):
-            log.debug('key: %s', key)
+            log.debug('key: {}'.format(key))
             path = os.path.join(base_path, key)
-            log.debug('path: %s', path)
+            log.debug('path: {}'.format(path))
 
             if key not in self.schema:
                 if self.enforce_schema:
@@ -159,7 +159,7 @@ class Cconfig(collections.MutableMapping):
                 schema = self.get_schema(key)
                 # read property value from file
                 value = self.__read(path)
-                log.debug('value: %s', value)
+                log.debug('value: {}'.format(value))
                 self._data[key] = schema.type(value)
             elif os.path.isdir(path):
                 try:
@@ -171,14 +171,14 @@ class Cconfig(collections.MutableMapping):
                 except KeyError:
                     log.warn('Could not find schema entry for directory, ignoring: {}'.format(key))
             else:
-                raise ValueError('File type of %s not supported'.format(path))
+                raise ValueError('File type of {} not supported'.format(path))
         
     def to_dir(self, base_path):
         if not os.path.isdir(base_path):
             os.mkdir(base_path)
-        log.debug('Saving cconfig object to: %s', base_path)
+        log.debug('Saving cconfig object to: {}'.format(base_path))
         for key,value in self.items():
-            log.debug('%s = %s', key, value)
+            log.debug('{} = {}'.format(key, value))
 
             if key not in self.schema:
                 if self.enforce_schema:
@@ -187,9 +187,9 @@ class Cconfig(collections.MutableMapping):
                     log.debug('ignoring unknown key: {}'.format(key))
                     continue
 
-            log.debug('type: %s', type(value))
+            log.debug('type: {}'.format(type(value)))
             path = os.path.join(base_path, key)
-            log.debug('path: %s', path)
+            log.debug('path: {}'.format(path))
             if isinstance(value, Cconfig):
                 # value is a cconfig object, delegate serialization to it
                 value.to_dir(path)
