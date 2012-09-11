@@ -55,6 +55,11 @@ class CconfigSchema(object):
 
 class Cconfig(collections.MutableMapping):
     def __init__(self, schema=None, strict=False):
+        """
+        TODO: allow schema to be:
+            - strictly verified against
+            - ignore unkown keys
+        """
         self.schema = schema or CconfigSchema()
         self.strict = strict
         self._data = dict()
