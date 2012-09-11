@@ -203,6 +203,8 @@ class Cconfig(collections.MutableMapping):
                 # value is a boolean, True: file exists, False: file does not exist
                 if value:
                     open(path, 'w').close()
+                elif os.path.isfile(path):
+                    os.unlink(path)
             elif isinstance(value, collections.MutableSequence):
                 # value is a list, save as newline delimited string
                 self.__write(path, '\n'.join(value))
@@ -210,3 +212,5 @@ class Cconfig(collections.MutableMapping):
                 # just save as string
                 if value:
                     self.__write(path, value)
+                elif os.path.isfile(path):
+                    os.unlink(path)
