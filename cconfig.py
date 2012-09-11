@@ -1,9 +1,14 @@
 '''
-- Cconfig should not depend on filesystem
-- explicit load/save to/from disk
+(c) 2012 Steven Armstrong steven-cconfig@armstrong.cc
 
+A cconfig [1] implementation for python.
+
+[1] http://nico.schotteli.us/papers/linux/cconfig/
 
 --------------------------------------------------------------------------------
+
+- Cconfig should not depend on filesystem
+- explicit load/save to/from disk
 
 data types:
     - string: value of file
@@ -25,6 +30,7 @@ class CconfigError(Exception):
 
 
 SchemaItem = collections.namedtuple('SchemaItem', ('type_', 'subschema'))
+
 class CconfigSchema(object):
     def __init__(self, schema=None):
         self._schema = schema or ()
@@ -54,14 +60,17 @@ class CconfigSchema(object):
 
 
 class Cconfig(collections.MutableMapping):
-    def __init__(self, schema=None, strict=False):
+    def __init__(self, schema=None, enforce_schema=False, ignore_unknown=False):
         """
         TODO: allow schema to be:
             - strictly verified against
             - ignore unkown keys
         """
         self.schema = schema or CconfigSchema()
-        self.strict = strict
+        if enforce_schema and ignore_unknown:
+            log.warn('enforce_schema overrides ignore_unkown')
+        self.enforce_schema = enforce_schema
+        self.ignore_unknown = ignore_unknown
         self._data = dict()
 
     def __getitem__(self, key):
@@ -90,7 +99,7 @@ class Cconfig(collections.MutableMapping):
         # if file does not exist return None
         try:
             with open(path, 'r') as fd:
-                value = fd.read()
+                value = fd.read().strip('\n')
         except EnvironmentError as e:
             # error ignored
             pass
@@ -99,7 +108,7 @@ class Cconfig(collections.MutableMapping):
     def __write(self, path, value):
         try:
             with open(path, 'w') as fd:
-                fd.write(str(value))
+                fd.write(str(value) + '\n')
         except EnvironmentError as e:
             # error ignored
             pass
@@ -108,7 +117,7 @@ class Cconfig(collections.MutableMapping):
         try:
             return self.schema[key]
         except KeyError:
-            if not self.strict:
+            if not self.enforce_schema:
                 return SchemaItem(type_=str, subschema=None)
             else:
                 # FIXME: wrap in custom exception
@@ -120,18 +129,24 @@ class Cconfig(collections.MutableMapping):
             log.debug('key: %s', key)
             path = os.path.join(base_path, key)
             log.debug('path: %s', path)
+
+            if key not in self.schema:
+                if self.enforce_schema:
+                    raise CconfigError('Unknown key not defined in schema: {}'.format(key))
+                elif self.ignore_unknown:
+                    log.debug('ignoring unknown key: {}'.format(key))
+                    continue
+
             if os.path.isfile(path):
-                # read property value from file
                 schema = self.get_schema(key)
+                # read property value from file
                 value = self.__read(path)
-                if value:
-                    value = value.strip('\n')
                 log.debug('value: %s', value)
                 self._data[key] = schema.type_(value)
             elif os.path.isdir(path):
-                # create new child cconfig object and dispatch
                 schema = self.schema[key]
-                o = self.__class__(CconfigSchema(schema.subschema), strict=self.strict)
+                # create new child cconfig object and dispatch
+                o = self.__class__(CconfigSchema(schema.subschema), enforce_schema=self.enforce_schema, ignore_unknown=self.ignore_unknown)
                 o.from_dir(path)
                 self._data[key] = o
             else:
@@ -143,27 +158,37 @@ class Cconfig(collections.MutableMapping):
         log.debug('to_dir: %s', base_path)
         for key,value in self.items():
             log.debug('%s = %s', key, value)
-            # read property value from file
-            type_ = type(value)
-            log.debug('type: %s', type_)
+
+            if key not in self.schema:
+                if self.enforce_schema:
+                    raise CconfigError('Unknown key not defined in schema: {}'.format(key))
+                elif self.ignore_unknown:
+                    log.debug('ignoring unknown key: {}'.format(key))
+                    continue
+
+            log.debug('type: %s', type(value))
             path = os.path.join(base_path, key)
             log.debug('path: %s', path)
             if isinstance(value, Cconfig):
+                # value is a cconfig object, delegate serialization to it
                 value.to_dir(path)
             elif isinstance(value, collections.MutableMapping):
+                # value is a dictionary, create a cconfig object and delegate serialization to it
                 schema = self.get_schema(key)
-                o = self.__class__(CconfigSchema(schema.subschema), strict=self.strict)
+                o = self.__class__(CconfigSchema(schema.subschema), enforce_schema=self.enforce_schema, ignore_unknown=self.ignore_unknown)
                 o.update(value)
                 o.to_dir(path)
             elif isinstance(value, bool):
+                # value is a boolean, True: file exists, False: file does not exist
                 if value:
                     open(path, 'w').close()
             elif isinstance(value, collections.MutableSequence):
+                # value is a list, save as newline delimited string
                 self.__write(path, '\n'.join(value))
             else:
-                # save as string
+                # just save as string
                 if value:
-                    self.__write(path, '{}\n'.format(value))
+                    self.__write(path, value)
 
 
 def main(path):
