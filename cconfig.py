@@ -159,6 +159,9 @@ class Cconfig(collections.MutableMapping):
                 schema = self.get_schema(key)
                 # read property value from file
                 value = self.__read(path)
+                if schema.type == bool:
+                    if not value:
+                        value = True
                 log.debug('value: {}'.format(value))
                 self._data[key] = schema.type(value)
             elif os.path.isdir(path):
