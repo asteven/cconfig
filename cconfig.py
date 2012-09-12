@@ -81,6 +81,12 @@ class Schema(object):
             else:
                 raise
 
+    def __iter__(self):
+        return iter(self._schema_map.keys())
+
+    def items(self):
+        return self._schema_map.items()
+
 
 class Cconfig(collections.MutableMapping):
     def __init__(self, schema=None, enforce_schema=False, ignore_unknown=False):
@@ -107,7 +113,7 @@ class Cconfig(collections.MutableMapping):
         return len(self._data)
 
     def update(self, other):
-        self._date.update(other)
+        self._data.update(other)
 
     def __repr__(self):
         return '<{} {}>'.format(self.__class__.__name__, self._data)
@@ -143,70 +149,57 @@ class Cconfig(collections.MutableMapping):
     def from_dir(self, base_path):
         self.clear()
         log.debug('Loading cconfig object from: {}'.format(base_path))
-        for key in os.listdir(base_path):
-            log.debug('key: {}'.format(key))
+        for key,schema in self.schema.items():
             path = os.path.join(base_path, key)
-            log.debug('path: {}'.format(path))
 
-            if key not in self.schema:
-                if self.enforce_schema:
-                    raise Error('Unknown key not defined in schema: {} ({})'.format(key, path))
-                elif self.ignore_unknown:
-                    log.debug('ignoring unknown key: {}'.format(key))
-                    continue
-
-            if os.path.isfile(path):
-                schema = self.get_schema(key)
+            if issubclass(schema.type, bool):
+                # value is a boolean, True: file exists, False: file does not exist
+                self[key] = os.path.isfile(path)
+            elif issubclass(schema.type, collections.MutableMapping):
+                # create new child cconfig object and dispatch parsing/loading to it
+                #o = self.__class__(schema=Schema(schema.subschema))
+                o = Cconfig(schema=Schema(schema.subschema))
+                o.from_dir(path)
+                self[key] = o
+            else:
                 # read property value from file
                 value = self.__read(path)
-                if schema.type == bool:
-                    if not value:
-                        value = True
-                log.debug('value: {}'.format(value))
-                self._data[key] = schema.type(value)
-            elif os.path.isdir(path):
-                try:
-                    schema = self.schema[key]
-                    # create new child cconfig object and dispatch parsing/loading to it
-                    o = self.__class__(Schema(schema.subschema), enforce_schema=self.enforce_schema, ignore_unknown=self.ignore_unknown)
-                    o.from_dir(path)
-                    self._data[key] = o
-                except KeyError:
-                    log.warn('Could not find schema entry for directory, ignoring: {}'.format(key))
-            else:
-                raise ValueError('File type of {} not supported'.format(path))
-        
+                if issubclass(schema.type,collections.MutableSequence):
+                    if value:
+                        value = value.split('\n')
+                    else:
+                        value = []
+                # cast to type using schema
+                self[key] = schema.type(value)
+            log.debug('< {} {} = {} {}'.format(path, key, self[key], schema.type))
+
     def to_dir(self, base_path):
         if not os.path.isdir(base_path):
             os.mkdir(base_path)
         log.debug('Saving cconfig object to: {}'.format(base_path))
-        for key,value in self.items():
+        for key,schema in self.schema.items():
             path = os.path.join(base_path, key)
-            log.debug('{} {} = {} {}'.format(path, key, value, type(value)))
+            value = self[key]
+            log.debug('> {} {} = {} {}'.format(path, key, value, schema.type))
 
-            if key not in self.schema:
-                if self.enforce_schema:
-                    raise Error('Unknown key not defined in schema: {}'.format(key))
-                elif self.ignore_unknown:
-                    log.debug('ignoring unknown key: {}'.format(key))
-                    continue
-
-            if isinstance(value, Cconfig):
-                # value is a cconfig object, delegate serialization to it
-                value.to_dir(path)
-            elif isinstance(value, collections.MutableMapping):
-                # value is a dictionary, create a cconfig object and delegate serialization to it
-                schema = self.get_schema(key)
-                o = self.__class__(Schema(schema.subschema), enforce_schema=self.enforce_schema, ignore_unknown=self.ignore_unknown)
-                o.update(value)
-                o.to_dir(path)
-            elif isinstance(value, bool):
+            if issubclass(schema.type, bool):
                 # value is a boolean, True: file exists, False: file does not exist
                 if value:
                     open(path, 'w').close()
                 elif os.path.isfile(path):
                     os.unlink(path)
-            elif isinstance(value, collections.MutableSequence):
+            elif issubclass(schema.type, collections.MutableMapping):
+                if isinstance(value, Cconfig):
+                    # value is a cconfig object, delegate serialization to it
+                    value.to_dir(path)
+                elif isinstance(value, collections.MutableMapping):
+                    # value is a dictionary, create a cconfig object and delegate serialization to it
+                    o = Cconfig(schema=Schema(schema.subschema))
+                    o.update(value)
+                    o.to_dir(path)
+            elif issubclass(schema.type,collections.MutableSequence):
+                if not isinstance(value, collections.MutableSequence):
+                    value = []
                 # value is a list, save as newline delimited string
                 self.__write(path, '\n'.join(value))
             else:
