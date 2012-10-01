@@ -24,73 +24,12 @@ import logging
 log = logging.getLogger(__name__)
 
 
-class Error(Exception):
-    pass
-
-
-SchemaItem = collections.namedtuple('SchemaItem', ('type', 'subschema'))
-
-class Schema(object):
-    """
-    schema_decl = (
-        # path, type, subschema
-        ('changed', bool),
-        ('code-remote', str),
-        ('source', str),
-        ('explorer', dict, (
-            ('state', str),
-        )),
-        ('parameter', dict, (
-            ('state', str),
-        )),
-        ('require', SomeCustomType),
-        ('nested', dict, (
-            ('first', str),
-            ('second', int),
-            ('third', dict, None, (
-                ('alist', list),
-                ('adict', dict),
-            )),
-        )),
-    )
-
-    """
-    def __init__(self, schema=None):
-        self._schema = schema or ()
-        self._schema_map = {}
-        self._types = {}
-        self._classes = {}
-        for entry in self._schema:
-            assert len(entry) >= 2
-            subschema = None
-            if len(entry) == 2:
-                key, type_ = entry
-            elif len(entry) == 3:
-                key, type_, subschema = entry
-            self._schema_map[key] = SchemaItem(type=type_, subschema=subschema)
-
-    def __contains__(self, key):
-        return key in self._schema_map
-
-    def __getitem__(self, key, default=None):
-        try:
-            return self._schema_map[key]
-        except KeyError:
-            if default:
-                return default
-            else:
-                raise
-
-    def __iter__(self):
-        return iter(self._schema_map.keys())
-
-    def items(self):
-        return self._schema_map.items()
+import cconfig
 
 
 class Cconfig(collections.MutableMapping):
     def __init__(self, schema=None, enforce_schema=False, ignore_unknown=False):
-        self.schema = schema or Schema()
+        self.schema = schema or cconfig.Schema()
         if enforce_schema and ignore_unknown:
             log.warn('enforce_schema overrides ignore_unkown')
         self.enforce_schema = enforce_schema
@@ -142,7 +81,7 @@ class Cconfig(collections.MutableMapping):
             return self.schema[key]
         except KeyError:
             if not self.enforce_schema:
-                return SchemaItem(type=str, subschema=None)
+                return cconfig.SchemaItem(type=str, subschema=None)
             else:
                 raise
 
@@ -158,7 +97,7 @@ class Cconfig(collections.MutableMapping):
             elif issubclass(schema.type, collections.MutableMapping):
                 # create new child cconfig object and dispatch parsing/loading to it
                 #o = self.__class__(schema=Schema(schema.subschema))
-                o = Cconfig(schema=Schema(schema.subschema))
+                o = Cconfig(schema=cconfig.Schema(schema.subschema))
                 o.from_dir(path)
                 self[key] = o
             else:
@@ -194,7 +133,7 @@ class Cconfig(collections.MutableMapping):
                     value.to_dir(path)
                 elif isinstance(value, collections.MutableMapping):
                     # value is a dictionary, create a cconfig object and delegate serialization to it
-                    o = Cconfig(schema=Schema(schema.subschema))
+                    o = Cconfig(schema=cconfig.Schema(schema.subschema))
                     o.update(value)
                     o.to_dir(path)
             elif issubclass(schema.type,collections.MutableSequence):
@@ -208,39 +147,3 @@ class Cconfig(collections.MutableMapping):
                     self.__write(path, value)
                 elif os.path.isfile(path):
                     os.unlink(path)
-
-
-class BoundCconfig(Cconfig):
-    """A cconfig object which is bound to a directory.
-    """
-    def __init__(self, path, **kwargs):
-        super(BoundCconfig, self).__init__(**kwargs)
-        self.path = path
-        self._dirty = set()
-        self.from_dir(self.path)
-
-    def __getitem__(self, key):
-        log.debug('__getitem__: {}'.format(key))
-        return super(BoundCconfig, self).__getitem__(key)
-
-    def __setitem__(self, key, value):
-        log.debug('__setitem__: {} = {}'.format(key, value))
-        if not key in self or value != self[key]:
-            super(BoundCconfig, self).__setitem__(key, value)
-            self._dirty.add(key)
-
-    def sync(self):
-        """Sync this cconfig object to disk.
-        """
-        if self._dirty:
-            self.to_dir(self.path)
-
-    def __enter__(self):
-        self.sync()
-        self.from_dir(self.path)
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.sync()
-        # we don't handle errors ourself
-        return False
