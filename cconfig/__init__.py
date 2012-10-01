@@ -25,4 +25,4 @@ class Error(Exception):
 
 from .core import Cconfig
 from .bound import BoundCconfig
-from .schema import Schema, SchemaItem
+from .schema import Schema

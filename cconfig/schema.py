@@ -6,17 +6,19 @@ A cconfig [1] implementation for python.
 [1] http://nico.schotteli.us/papers/linux/cconfig/
 '''
 
+import os
 import collections
 import logging
 log = logging.getLogger(__name__)
 
 
-SchemaItem = collections.namedtuple('SchemaItem', ('type', 'subschema'))
+import cconfig
+
 
 class Schema(object):
     """
     schema_decl = (
-        # path, type, subschema
+        # path, type, subschema_decl
         ('changed', bool),
         ('code-remote', str),
         ('source', str),
@@ -26,7 +28,7 @@ class Schema(object):
         ('parameter', dict, (
             ('state', str),
         )),
-        ('require', SomeCustomType),
+        ('require', SomeCustomCconfigType),
         ('nested', dict, (
             ('first', str),
             ('second', int),
@@ -41,8 +43,7 @@ class Schema(object):
     def __init__(self, schema=None):
         self._schema = schema or ()
         self._schema_map = {}
-        self._types = {}
-        self._classes = {}
+        self.__type_map = None
         for entry in self._schema:
             assert len(entry) >= 2
             subschema = None
@@ -50,7 +51,8 @@ class Schema(object):
                 key, type_ = entry
             elif len(entry) == 3:
                 key, type_, subschema = entry
-            self._schema_map[key] = SchemaItem(type=type_, subschema=subschema)
+            cconfig_type = self.type_map[type_]
+            self._schema_map[key] = cconfig_type(schema=subschema)
 
     def __contains__(self, key):
         return key in self._schema_map
@@ -69,3 +71,104 @@ class Schema(object):
 
     def items(self):
         return self._schema_map.items()
+
+    @property
+    def type_map(self):
+        if not self.__type_map:
+            subclasses = CconfigType.__subclasses__()
+            for subclass in subclasses:
+                subclasses.extend(subclass.__subclasses__())
+            self.__type_map = dict((subclass._type, subclass) for subclass in subclasses)
+        return self.__type_map
+
+
+class CconfigType(object):
+
+    def __init__(self, schema=None):
+        self.schema = schema
+
+    def _read(self, path):
+        value = None
+        # if file does not exist return None
+        try:
+            with open(path, 'r') as fd:
+                value = fd.read().strip('\n')
+        except EnvironmentError as e:
+            # error ignored
+            pass
+        return value
+
+    def _write(self, path, value):
+        try:
+            with open(path, 'w') as fd:
+                fd.write(str(value) + '\n')
+        except EnvironmentError as e:
+            # error ignored
+            pass
+
+
+class BoolCconfigType(CconfigType):
+    _type = bool
+
+    def from_path(self, path):
+        return os.path.isfile(path)
+
+    def to_path(self, path, value):
+        # True: file exists, False: file does not exist
+        if value:
+            open(path, 'w').close()
+        elif os.path.isfile(path):
+            os.unlink(path)
+
+
+class StrCconfigType(CconfigType):
+    _type = str
+
+    def from_path(self, path):
+        return self._read(path)
+
+    def to_path(self, path, value):
+        self._write(path, value)
+
+
+class IntCconfigType(StrCconfigType):
+    _type = int
+
+    def from_path(self, path):
+        return int(super(IntType, self).from_path(path))
+
+
+class ListCconfigType(CconfigType):
+    _type = list
+
+    def from_path(self, path):
+        value = self._read()
+        if value:
+            value = value.split('\n')
+        else:
+            value = []
+
+    def to_path(self, path, value):
+        if not isinstance(value, collections.MutableSequence):
+            value = []
+        # value is a list, save as newline delimited string
+        self._write(path, '\n'.join(value))
+
+
+class DictCconfigType(CconfigType):
+    _type = dict
+
+    def from_path(self, path):
+        o = cconfig.Cconfig(schema=Schema(self.schema))
+        o.from_dir(path)
+        return o
+
+    def to_path(self, path, value):
+        if isinstance(value, cconfig.Cconfig):
+            # value is a cconfig object, delegate serialization to it
+            value.to_dir(path)
+        elif isinstance(value, collections.MutableMapping):
+            # value is a dictionary, create a cconfig object and delegate serialization to it
+            o = cconfig.Cconfig(schema=Schema(self.schema))
+            o.update(value)
+            o.to_dir(path)
