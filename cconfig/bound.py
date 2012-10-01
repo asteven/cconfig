@@ -18,18 +18,18 @@ import cconfig
 class BoundCconfig(cconfig.Cconfig):
     """A cconfig object which is bound to a directory.
     """
-    def __init__(self, path, **kwargs):
-        super(BoundCconfig, self).__init__(**kwargs)
+    def __init__(self, path, schema):
+        super(BoundCconfig, self).__init__(schema)
         self.path = path
         self._dirty = set()
         self.from_dir(self.path)
 
     def __getitem__(self, key):
-        log.debug('__getitem__: {}'.format(key))
+        #log.debug('__getitem__: {}'.format(key))
         return super(BoundCconfig, self).__getitem__(key)
 
     def __setitem__(self, key, value):
-        log.debug('__setitem__: {} = {}'.format(key, value))
+        #log.debug('__setitem__: {} = {}'.format(key, value))
         if not key in self or value != self[key]:
             super(BoundCconfig, self).__setitem__(key, value)
             self._dirty.add(key)

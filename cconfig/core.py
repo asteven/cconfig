@@ -28,12 +28,8 @@ import cconfig
 
 
 class Cconfig(collections.MutableMapping):
-    def __init__(self, schema=None, enforce_schema=False, ignore_unknown=False):
-        self.schema = schema or cconfig.Schema()
-        if enforce_schema and ignore_unknown:
-            log.warn('enforce_schema overrides ignore_unkown')
-        self.enforce_schema = enforce_schema
-        self.ignore_unknown = ignore_unknown
+    def __init__(self, schema):
+        self.schema = schema
         self._data = dict()
 
     def __getitem__(self, key):

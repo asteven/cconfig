@@ -1,4 +1,7 @@
 #!/usr/bin/env python
+#
+# Example of using a BoundCconfig
+#
 
 import logging
 logging.basicConfig(level=logging.DEBUG, format='%(levelname)s: %(message)s')
@@ -9,7 +12,7 @@ sys.path.insert(0, op.abspath(op.join(op.dirname(op.realpath(__file__)), '..')))
 
 import cconfig 
 
-def main(path):
+def main():
     schema_decl = (
         # path, type, subschema
         ('changed', bool),
@@ -26,24 +29,27 @@ def main(path):
 
     schema = cconfig.Schema(schema_decl)
 
-    c = cconfig.Cconfig(schema)
-    c.from_dir(path)
-    print(c)
-    #c['changed'] = True
-    #print('changed: ', c['changed'])
-    #print('state: ', c['state'])
-    #print('parameter[\'state\']: ', c['parameter']['state'])
-    #print('explorer[\'state\']: ', c['explorer']['state'])
-    #print(c)
     import tempfile
-    tmpdir = tempfile.mkdtemp()
-    print('tmpdir: ', tmpdir)
-    c.to_dir(tmpdir)
+    path = tempfile.mkdtemp()
+    print('path: ', path)
+    c = cconfig.BoundCconfig(path, schema=schema)
+    print(c)
+    # change some properties
+    c['changed'] = True
+    c['code-remote'] = 'whatever'
+    c['source'] = '/path/to/source'
+    c['explorer'] = {'state': 'absent'}
+    c['parameter'] = {'state': 'present'}
+    c['state'] = 'done'
+    # flush changes to disk
+    c.sync()
+    print(c)
+    # implicit load/sync with context manager
+    with c as _c:
+        print(_c)
+        _c['state'] = 'not-like-before'
+    print(c)
 
 
 if __name__ == '__main__':
-    if len(sys.argv) > 1:
-        test_dir = op.abspath(sys.argv[1])
-    else:
-        test_dir = op.abspath(op.join(op.dirname(__file__), 'cconfig_dir/object/__start_on_boot/openvswitch/.cdist'))
-    main(test_dir)
+    main()
