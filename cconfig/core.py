@@ -67,7 +67,7 @@ class Cconfig(collections.MutableMapping):
         log.debug('Saving cconfig object to: {}'.format(base_path))
         for key,cconfig_type in self.schema.items():
             path = os.path.join(base_path, key)
-            if key in self:
-                value = self[key]
+            value = self.get(key, None)
+            if value is not None:
                 log.debug('> {} {} = {} {}'.format(path, key, value, cconfig_type._type.__name__))
                 cconfig_type.to_path(path, value)
