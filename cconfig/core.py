@@ -59,7 +59,8 @@ class Cconfig(collections.MutableMapping):
         for key,cconfig_type in self.schema.items():
             path = os.path.join(base_path, key)
             self[key] = cconfig_type.from_path(path)
-            log.debug('< {} {} = {} {}'.format(path, key, self[key], cconfig_type._type.__name__))
+            #log.debug('< {} {} = {} {}'.format(path, key, self[key], cconfig_type._type.__name__))
+            log.debug('< {} {} = {} {}'.format(path, key, self[key], cconfig_type))
 
     def to_dir(self, base_path):
         if not os.path.isdir(base_path):
@@ -68,5 +69,6 @@ class Cconfig(collections.MutableMapping):
         for key,cconfig_type in self.schema.items():
             path = os.path.join(base_path, key)
             value = self.get(key, None)
-            log.debug('> {} {} = {} {}'.format(path, key, value, cconfig_type._type.__name__))
+            #log.debug('> {} {} = {} {}'.format(path, key, value, cconfig_type._type.__name__))
+            log.debug('> {} {} = {} {}'.format(path, key, value, cconfig_type))
             cconfig_type.to_path(path, value)

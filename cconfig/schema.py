@@ -78,7 +78,7 @@ class Schema(object):
             subclasses = CconfigType.__subclasses__()
             for subclass in subclasses:
                 subclasses.extend(subclass.__subclasses__())
-            self.__type_map = dict((subclass._type, subclass) for subclass in subclasses)
+            self.__type_map = dict((getattr(subclass, '_type', subclass), subclass) for subclass in subclasses)
         return self.__type_map
 
 
@@ -86,6 +86,9 @@ class CconfigType(object):
 
     def __init__(self, schema=None):
         self.schema = schema
+
+    def __str__(self):
+        return self.__class__.__name__
 
     def _read(self, path):
         value = None
