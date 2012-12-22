@@ -143,6 +143,8 @@ class IntCconfigType(StrCconfigType):
 
 
 class ListCconfigType(CconfigType):
+    """List from lines in a file.
+    """
     _type = list
 
     def from_path(self, path):
@@ -158,6 +160,20 @@ class ListCconfigType(CconfigType):
                 value = []
             # value is a list, save as newline delimited string
             self._write(path, '\n'.join(value))
+
+
+class ListDirCconfigType(cconfig.schema.CconfigType):
+    """List from directory contents instead of from lines in a file.
+    """
+
+    def from_path(self, path):
+        try:
+            return os.listdir(path)
+        except EnvironmentError:
+            return []
+
+    def to_path(self, path, value):
+        pass
 
 
 class DictCconfigType(CconfigType):
