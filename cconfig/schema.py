@@ -143,7 +143,7 @@ class ListCconfigType(CconfigType):
     _type = list
 
     def from_path(self, path):
-        value = self._read()
+        value = self._read(path)
         if value:
             value = value.split('\n')
         else:
