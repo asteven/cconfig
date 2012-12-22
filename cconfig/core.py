@@ -68,6 +68,5 @@ class Cconfig(collections.MutableMapping):
         for key,cconfig_type in self.schema.items():
             path = os.path.join(base_path, key)
             value = self.get(key, None)
-            if value is not None:
-                log.debug('> {} {} = {} {}'.format(path, key, value, cconfig_type._type.__name__))
-                cconfig_type.to_path(path, value)
+            log.debug('> {} {} = {} {}'.format(path, key, value, cconfig_type._type.__name__))
+            cconfig_type.to_path(path, value)

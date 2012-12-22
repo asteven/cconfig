@@ -128,7 +128,8 @@ class StrCconfigType(CconfigType):
         return self._read(path)
 
     def to_path(self, path, value):
-        self._write(path, value)
+        if value is not None:
+            self._write(path, value)
 
 
 class IntCconfigType(StrCconfigType):
@@ -149,10 +150,11 @@ class ListCconfigType(CconfigType):
             value = []
 
     def to_path(self, path, value):
-        if not isinstance(value, collections.MutableSequence):
-            value = []
-        # value is a list, save as newline delimited string
-        self._write(path, '\n'.join(value))
+        if value is not None:
+            if not isinstance(value, collections.MutableSequence):
+                value = []
+            # value is a list, save as newline delimited string
+            self._write(path, '\n'.join(value))
 
 
 class DictCconfigType(CconfigType):
@@ -164,11 +166,12 @@ class DictCconfigType(CconfigType):
         return o
 
     def to_path(self, path, value):
-        if isinstance(value, cconfig.Cconfig):
-            # value is a cconfig object, delegate serialization to it
-            value.to_dir(path)
-        elif isinstance(value, collections.MutableMapping):
-            # value is a dictionary, create a cconfig object and delegate serialization to it
-            o = cconfig.Cconfig(schema=Schema(self.schema))
-            o.update(value)
-            o.to_dir(path)
+        if value is not None:
+            if isinstance(value, cconfig.Cconfig):
+                # value is a cconfig object, delegate serialization to it
+                value.to_dir(path)
+            elif isinstance(value, collections.MutableMapping):
+                # value is a dictionary, create a cconfig object and delegate serialization to it
+                o = cconfig.Cconfig(schema=Schema(self.schema))
+                o.update(value)
+                o.to_dir(path)
