@@ -148,9 +148,9 @@ class ListCconfigType(CconfigType):
     def from_path(self, path):
         value = self._read(path)
         if value:
-            value = value.split('\n')
+            return value.split('\n')
         else:
-            value = []
+            return []
 
     def to_path(self, path, value):
         if value is not None:
