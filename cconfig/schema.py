@@ -162,7 +162,7 @@ class ListCconfigType(CconfigType):
             self._write(path, '\n'.join(value))
 
 
-class ListDirCconfigType(cconfig.schema.CconfigType):
+class ListDirCconfigType(CconfigType):
     """List from directory contents instead of from lines in a file.
     """
 
