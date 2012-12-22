@@ -173,7 +173,7 @@ class ListDirCconfigType(cconfig.schema.CconfigType):
             return []
 
     def to_path(self, path, value):
-        pass
+        raise NotImplementedError('ListDirCconfigType is implemented read only, to_path not implemented.')
 
 
 class DictCconfigType(CconfigType):
