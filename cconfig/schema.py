@@ -165,6 +165,7 @@ class ListCconfigType(CconfigType):
 class ListDirCconfigType(CconfigType):
     """List from directory contents instead of from lines in a file.
     """
+    _type = 'listdir'
 
     def from_path(self, path):
         try:
