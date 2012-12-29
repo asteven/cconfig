@@ -39,6 +39,7 @@ class BoundCconfig(cconfig.Cconfig):
         """
         if self._dirty:
             self.to_dir(self.path)
+            self._dirty.clear()
 
     def __enter__(self):
         self.sync()
