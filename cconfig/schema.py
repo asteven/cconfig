@@ -128,6 +128,8 @@ class StrCconfigType(CconfigType):
     _type = str
 
     def from_path(self, path):
+        """Return the string stored in path or None if path doies not exist.
+        """
         return self._read(path)
 
     def to_path(self, path, value):
