@@ -6,16 +6,13 @@ A cconfig [1] implementation for python.
 [1] http://nico.schotteli.us/papers/linux/cconfig/
 '''
 
-import os
-import collections
 import logging
 log = logging.getLogger(__name__)
 
+from . import Cconfig
 
-import cconfig
 
-
-class BoundCconfig(cconfig.Cconfig):
+class BoundCconfig(Cconfig):
     """A cconfig object which is bound to a directory.
     """
     def __init__(self, path, schema):

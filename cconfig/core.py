@@ -24,9 +24,6 @@ import logging
 log = logging.getLogger(__name__)
 
 
-import cconfig
-
-
 class Cconfig(collections.MutableMapping):
     def __init__(self, schema):
         self.schema = schema

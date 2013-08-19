@@ -11,8 +11,7 @@ import collections
 import logging
 log = logging.getLogger(__name__)
 
-
-import cconfig
+from . import Cconfig
 
 
 class Schema(object):
@@ -32,7 +31,7 @@ class Schema(object):
         ('nested', dict, (
             ('first', str),
             ('second', int),
-            ('third', dict, None, (
+            ('third', dict, (
                 ('alist', list),
                 ('adict', dict),
             )),
@@ -183,17 +182,17 @@ class DictCconfigType(CconfigType):
     _type = dict
 
     def from_path(self, path):
-        o = cconfig.Cconfig(schema=Schema(self.schema))
+        o = Cconfig(schema=Schema(self.schema))
         o.from_dir(path)
         return o
 
     def to_path(self, path, value):
         if value is not None:
-            if isinstance(value, cconfig.Cconfig):
+            if isinstance(value, Cconfig):
                 # value is a cconfig object, delegate serialization to it
                 value.to_dir(path)
             elif isinstance(value, collections.MutableMapping):
                 # value is a dictionary, create a cconfig object and delegate serialization to it
-                o = cconfig.Cconfig(schema=Schema(self.schema))
+                o = Cconfig(schema=Schema(self.schema))
                 o.update(value)
                 o.to_dir(path)
