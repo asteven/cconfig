@@ -68,6 +68,9 @@ class Schema(object):
     def __iter__(self):
         return iter(self._schema_map.keys())
 
+    def keys(self):
+        return self._schema_map.keys()
+
     def items(self):
         return self._schema_map.items()
 

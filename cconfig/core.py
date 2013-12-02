@@ -50,20 +50,28 @@ class Cconfig(collections.MutableMapping):
     def __repr__(self):
         return '<{} {}>'.format(self.__class__.__name__, self._data)
 
-    def from_dir(self, base_path):
+    def from_dir(self, base_path, keys=None, changed_since=None):
         self.clear()
         log.debug('Loading cconfig object from: {}'.format(base_path))
-        for key,cconfig_type in self.schema.items():
+        # if the user has given a list of keys, only work with those
+        # otherwise use all keys.
+        candidates = keys or self.schema.keys()
+        for key in candidates:
+            cconfig_type = self.schema[key]
             path = os.path.join(base_path, key)
             self[key] = cconfig_type.from_path(path)
             #log.debug('< {} {} = {} {}'.format(path, key, self[key], cconfig_type._type.__name__))
             log.debug('< {} {} = {} {}'.format(path, key, self[key], cconfig_type))
 
-    def to_dir(self, base_path):
+    def to_dir(self, base_path, keys=None):
         if not os.path.isdir(base_path):
             os.mkdir(base_path)
         log.debug('Saving cconfig object to: {}'.format(base_path))
-        for key,cconfig_type in self.schema.items():
+        # if the user has given a list of keys, only work with those
+        # otherwise use all keys.
+        candidates = keys or self.schema.keys()
+        for key in candidates:
+            cconfig_type = self.schema[key]
             path = os.path.join(base_path, key)
             value = self.get(key, None)
             #log.debug('> {} {} = {} {}'.format(path, key, value, cconfig_type._type.__name__))
