@@ -7,6 +7,7 @@ A cconfig [1] implementation for python.
 '''
 
 import os
+import glob
 import collections
 import logging
 log = logging.getLogger(__name__)
@@ -199,3 +200,37 @@ class DictCconfigType(CconfigType):
                 o = Cconfig(schema=Schema(self.schema))
                 o.update(value)
                 o.to_dir(path)
+
+
+class CollectionType(CconfigType):
+    _type = 'collection'
+
+    def from_path(self, path):
+        collection = []
+        for file_name in glob.glob1(path, '*'):
+            file_path = os.path.join(path, file_name)
+            o = Cconfig(schema=Schema(self.schema))
+            o.from_dir(file_path)
+            collection.append(o)
+        return collection
+
+    def to_path(self, path, collection):
+        os.mkdir(path)
+        if collection is not None:
+            for item in collection:
+                if isinstance(item, Cconfig):
+                    # item is a cconfig object, delegate serialization to it
+                    # first schema item is primary key
+                    key = self.schema[0][0]
+                    file_name = item[key]
+                    file_path = os.path.join(path, file_name)
+                    item.to_dir(file_path)
+                elif isinstance(item, collections.MutableMapping):
+                    # value is a dictionary, create a cconfig object and delegate serialization to it
+                    o = Cconfig(schema=Schema(self.schema))
+                    o.update(item)
+                    key = self.schema[0][0]
+                    file_name = o[key]
+                    file_path = os.path.join(path, file_name)
+                    o.to_dir(file_path)
+
