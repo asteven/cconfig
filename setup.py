@@ -1,4 +1,4 @@
-from distutils.core import setup
+from setuptools import setup, find_packages
 
 name = 'cconfig'
 version = '0.1.0'
@@ -10,6 +10,5 @@ setup(
     author_email='steven-%s@armstrong.cc' % name,
     url='http://github.com/asteven/%s/' % name,
     description='cconfig implementation for python',
-    py_modules=[name],
+    packages=find_packages(),
 )
-
