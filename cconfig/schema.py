@@ -199,6 +199,9 @@ class ListDirCconfigType(CconfigType):
 
 
 class DictCconfigType(CconfigType):
+    """Dictionary from a directory, where file names are the keys and their
+    content the values.
+    """
     _type = dict
 
     def from_path(self, path):
@@ -219,6 +222,9 @@ class DictCconfigType(CconfigType):
 
 
 class CollectionType(CconfigType):
+    """List from directory contents where each item in the list is itself a
+    cconfig object.
+    """
     _type = 'collection'
 
     def from_path(self, path):
