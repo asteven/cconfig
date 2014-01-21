@@ -234,3 +234,50 @@ class CollectionType(CconfigType):
                     file_path = os.path.join(path, file_name)
                     o.to_dir(file_path)
 
+
+class MappingType(CconfigType):
+    """A Mapping is a generic container for associating key/value pairs.
+
+    Usage Example:
+        schema_decl = (
+            ('user', 'mapping', (
+                ('first_name', str),
+                ('last_name', str),
+            ),
+        )
+        schema = cconfig.Schema(schema_decl)
+        c = cconfig.Cconfig(schema=schema)
+        print(c)
+        c['user']['john'] = {'first_name': 'John', 'last_name': 'Doe'}
+        import tempfile
+        path = tempfile.mkdtemp()
+        c.to_dir(path)
+    """
+    _type = 'mapping'
+
+    def from_path(self, path):
+        mapping = {}
+        for file_name in glob.glob1(path, '*'):
+            file_path = os.path.join(path, file_name)
+            o = Cconfig(schema=Schema(self.schema))
+            o.from_dir(file_path)
+            mapping[file_name] = o
+        return mapping
+
+    def to_path(self, path, mapping):
+        os.mkdir(path)
+        if mapping is not None:
+            for key,value in mapping.items():
+                if isinstance(value, Cconfig):
+                    # item is a cconfig object, delegate serialization to it
+                    # first schema item is primary key
+                    file_name = key
+                    file_path = os.path.join(path, file_name)
+                    value.to_dir(file_path)
+                elif isinstance(value, collections.MutableMapping):
+                    # value is a dictionary, create a cconfig object and delegate serialization to it
+                    o = Cconfig(schema=Schema(self.schema))
+                    o.update(value)
+                    file_name = key
+                    file_path = os.path.join(path, file_name)
+                    o.to_dir(file_path)
