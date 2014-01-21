@@ -147,6 +147,22 @@ class IntCconfigType(StrCconfigType):
         return int(super(IntType, self).from_path(path))
 
 
+class DateTimeType(cconfig.schema.StrCconfigType):
+    """Datetime from unix timestamp in a file.
+    TODO: maybe set/get file ctime instead of storing value inside file?
+    """
+    _type = 'datetime'
+
+    def from_path(self, path):
+        value = super(DateTimeType, self).from_path(path)
+        if value:
+            return datetime.datetime.fromtimestamp(float(value))
+
+    def to_path(self, path, value):
+        if value:
+            super(DateTimeType, self).to_path(path, value.timestamp())
+
+
 class ListCconfigType(CconfigType):
     """List from lines in a file.
     """
