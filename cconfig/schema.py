@@ -147,7 +147,7 @@ class IntCconfigType(StrCconfigType):
         return int(super(IntType, self).from_path(path))
 
 
-class DateTimeType(cconfig.schema.StrCconfigType):
+class DateTimeType(StrCconfigType):
     """Datetime from unix timestamp in a file.
     TODO: maybe set/get file ctime instead of storing value inside file?
     """
