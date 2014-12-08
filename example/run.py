@@ -7,7 +7,8 @@ import os.path as op
 import sys
 sys.path.insert(0, op.abspath(op.join(op.dirname(op.realpath(__file__)), '..')))
 
-import cconfig 
+import cconfig
+
 
 def main(path):
     schema_decl = (
@@ -25,20 +26,18 @@ def main(path):
     )
 
     schema = cconfig.Schema(schema_decl)
-
-    c = cconfig.Cconfig(schema)
-    c.from_dir(path)
-    print(c)
-    #c['changed'] = True
-    #print('changed: ', c['changed'])
-    #print('state: ', c['state'])
-    #print('parameter[\'state\']: ', c['parameter']['state'])
-    #print('explorer[\'state\']: ', c['explorer']['state'])
-    #print(c)
+    obj = cconfig.from_schema(schema)
+    print(obj)
+    obj['changed'] = True
+    print('changed: ', obj['changed'])
+    print('state: ', obj['state'])
+    print('parameter[\'state\']: ', obj['parameter']['state'])
+    print('explorer[\'state\']: ', obj['explorer']['state'])
+    print(obj)
     import tempfile
     tmpdir = tempfile.mkdtemp()
     print('tmpdir: ', tmpdir)
-    c.to_dir(tmpdir)
+    cconfig.to_dir(tmpdir, obj, schema=schema)
 
 
 if __name__ == '__main__':

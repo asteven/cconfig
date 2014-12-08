@@ -1,5 +1,5 @@
 '''
-(c) 2012 Steven Armstrong steven-cconfig@armstrong.cc
+(c) 2012-2014 Steven Armstrong steven-cconfig@armstrong.cc
 
 A cconfig [1] implementation for python.
 
@@ -11,8 +11,6 @@ import glob
 import collections
 import logging
 log = logging.getLogger(__name__)
-
-from . import Cconfig
 
 
 class Schema(object):
@@ -42,7 +40,7 @@ class Schema(object):
     """
     def __init__(self, schema=None):
         self._schema = schema or ()
-        self._schema_map = {}
+        self._schema_map = collections.OrderedDict()
         self.__type_map = None
         for entry in self._schema:
             assert len(entry) >= 2
@@ -88,7 +86,7 @@ class Schema(object):
 class CconfigType(object):
 
     def __init__(self, schema=None):
-        self.schema = schema
+        self.schema = Schema(schema=schema)
 
     def __str__(self):
         return self.__class__.__name__
@@ -205,20 +203,11 @@ class DictCconfigType(CconfigType):
     _type = dict
 
     def from_path(self, path):
-        o = Cconfig(schema=Schema(self.schema))
-        o.from_dir(path)
-        return o
+        return from_dir(path, schema=self.schema)
 
     def to_path(self, path, value):
         if value is not None:
-            if isinstance(value, Cconfig):
-                # value is a cconfig object, delegate serialization to it
-                value.to_dir(path)
-            elif isinstance(value, collections.MutableMapping):
-                # value is a dictionary, create a cconfig object and delegate serialization to it
-                o = Cconfig(schema=Schema(self.schema))
-                o.update(value)
-                o.to_dir(path)
+            to_dir(path, value, schema=self.schema)
 
 
 class CollectionType(CconfigType):
@@ -231,8 +220,7 @@ class CollectionType(CconfigType):
         collection = []
         for file_name in glob.glob1(path, '*'):
             file_path = os.path.join(path, file_name)
-            o = Cconfig(schema=Schema(self.schema))
-            o.from_dir(file_path)
+            o = from_dir(file_path, schema=self.schema)
             collection.append(o)
         return collection
 
@@ -240,21 +228,11 @@ class CollectionType(CconfigType):
         os.mkdir(path)
         if collection is not None:
             for item in collection:
-                if isinstance(item, Cconfig):
-                    # item is a cconfig object, delegate serialization to it
-                    # first schema item is primary key
-                    key = self.schema[0][0]
-                    file_name = item[key]
-                    file_path = os.path.join(path, file_name)
-                    item.to_dir(file_path)
-                elif isinstance(item, collections.MutableMapping):
-                    # value is a dictionary, create a cconfig object and delegate serialization to it
-                    o = Cconfig(schema=Schema(self.schema))
-                    o.update(item)
-                    key = self.schema[0][0]
-                    file_name = o[key]
-                    file_path = os.path.join(path, file_name)
-                    o.to_dir(file_path)
+                # use first name in the schema as the key to store it under
+                key = self.schema.keys()[0]
+                file_name = item[key]
+                file_path = os.path.join(path, file_name)
+                to_dir(file_path, item, schema=self.schema)
 
 
 class MappingType(CconfigType):
@@ -268,38 +246,33 @@ class MappingType(CconfigType):
             ),
         )
         schema = cconfig.Schema(schema_decl)
-        c = cconfig.Cconfig(schema=schema)
-        print(c)
-        c['user']['john'] = {'first_name': 'John', 'last_name': 'Doe'}
+        obj = {'user': {
+                'john': {'first_name': 'John', 'last_name': 'Doe'}
+            }
+        }
         import tempfile
         path = tempfile.mkdtemp()
-        c.to_dir(path)
+        to_dir(path, obj, schema=schema)
     """
     _type = 'mapping'
 
     def from_path(self, path):
         mapping = {}
-        for file_name in glob.glob1(path, '*'):
-            file_path = os.path.join(path, file_name)
-            o = Cconfig(schema=Schema(self.schema))
-            o.from_dir(file_path)
-            mapping[file_name] = o
+        for key in glob.glob1(path, '*'):
+            file_path = os.path.join(path, key)
+            o = from_dir(file_path, schema=self.schema)
+            mapping[key] = o
         return mapping
 
     def to_path(self, path, mapping):
         os.mkdir(path)
         if mapping is not None:
             for key,value in mapping.items():
-                if isinstance(value, Cconfig):
-                    # item is a cconfig object, delegate serialization to it
-                    # first schema item is primary key
-                    file_name = key
-                    file_path = os.path.join(path, file_name)
-                    value.to_dir(file_path)
-                elif isinstance(value, collections.MutableMapping):
-                    # value is a dictionary, create a cconfig object and delegate serialization to it
-                    o = Cconfig(schema=Schema(self.schema))
-                    o.update(value)
-                    file_name = key
-                    file_path = os.path.join(path, file_name)
-                    o.to_dir(file_path)
+                file_path = os.path.join(path, key)
+                to_dir(file_path, value, schema=self.schema)
+
+
+
+from . import from_dir, to_dir
+
+default_cconfig_type = StrCconfigType()

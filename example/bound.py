@@ -28,27 +28,27 @@ def main():
     )
 
     schema = cconfig.Schema(schema_decl)
+    d = cconfig.from_schema(schema)
+    print(d)
+    # set some properties
+    d['changed'] = True
+    d['code-remote'] = 'whatever'
+    d['source'] = '/path/to/source'
+    d['explorer'] = {'state': 'absent'}
+    d['parameter'] = {'state': 'present'}
+    d['state'] = 'done'
 
     import tempfile
     path = tempfile.mkdtemp()
     print('path: ', path)
-    c = cconfig.BoundCconfig(path, schema=schema)
-    print(c)
-    # change some properties
-    c['changed'] = True
-    c['code-remote'] = 'whatever'
-    c['source'] = '/path/to/source'
-    c['explorer'] = {'state': 'absent'}
-    c['parameter'] = {'state': 'present'}
-    c['state'] = 'done'
-    # flush changes to disk
-    c.sync()
-    print(c)
+    obj = cconfig.bind(d, path, schema=schema)
+    print(obj)
     # implicit load/sync with context manager
-    with c as _c:
-        print(_c)
-        _c['state'] = 'not-like-before'
-    print(c)
+    with obj as _o:
+        print(_o)
+        _o['state'] = 'not-like-before'
+        _o.save()
+    print(obj)
 
 
 if __name__ == '__main__':
