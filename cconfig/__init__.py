@@ -29,13 +29,13 @@ class Error(Exception):
     pass
 
 
-def from_schema(schema, keys=None):
+def from_schema(schema, obj=None, keys=None):
     """Create a new empty object from the given schema.
     """
     log.debug('Creating cconfig from schema')
     # whatever dir that does not exist
     base_path = tempfile.mktemp(prefix='cconfig.')
-    return from_dir(base_path, schema=schema, keys=keys)
+    return from_dir(base_path, obj=obj, schema=schema, keys=keys)
 
 
 def from_dir(base_path, obj=None, schema=None, keys=None):
