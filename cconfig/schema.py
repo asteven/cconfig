@@ -26,7 +26,7 @@ class Schema(object):
         ('parameter', dict, (
             ('state', str),
         )),
-        ('require', SomeCustomCconfigType),
+        ('require', SomeCustomType),
         ('nested', dict, (
             ('first', str),
             ('second', int),
@@ -105,13 +105,14 @@ class CconfigType(object):
     def _write(self, path, value):
         try:
             with open(path, 'w') as fd:
-                fd.write(str(value) + '\n')
+                if value:
+                    fd.write(str(value) + '\n')
         except EnvironmentError as e:
             # error ignored
             pass
 
 
-class BoolCconfigType(CconfigType):
+class BoolType(CconfigType):
     _type = bool
 
     def from_path(self, path):
@@ -125,7 +126,7 @@ class BoolCconfigType(CconfigType):
             os.unlink(path)
 
 
-class StrCconfigType(CconfigType):
+class StrType(CconfigType):
     _type = str
 
     def from_path(self, path):
@@ -138,14 +139,17 @@ class StrCconfigType(CconfigType):
             self._write(path, value)
 
 
-class IntCconfigType(StrCconfigType):
+class IntType(StrType):
     _type = int
 
     def from_path(self, path):
-        return int(super(IntType, self).from_path(path))
+        try:
+            return int(super().from_path(path))
+        except TypeError:
+            return None
 
 
-class DateTimeType(StrCconfigType):
+class DateTimeType(StrType):
     """Datetime from unix timestamp in a file.
     TODO: maybe set/get file ctime instead of storing value inside file?
     """
@@ -161,7 +165,7 @@ class DateTimeType(StrCconfigType):
             super(DateTimeType, self).to_path(path, value.timestamp())
 
 
-class ListCconfigType(CconfigType):
+class ListType(CconfigType):
     """List from lines in a file.
     """
     _type = list
@@ -181,7 +185,7 @@ class ListCconfigType(CconfigType):
             self._write(path, '\n'.join(value))
 
 
-class ListDirCconfigType(CconfigType):
+class ListDirType(CconfigType):
     """List from directory contents instead of from lines in a file.
     """
     _type = 'listdir'
@@ -193,10 +197,10 @@ class ListDirCconfigType(CconfigType):
             return []
 
     def to_path(self, path, value):
-        raise NotImplementedError('ListDirCconfigType is implemented read only, to_path not implemented.')
+        raise NotImplementedError('ListDirType is implemented read only, to_path not implemented.')
 
 
-class DictCconfigType(CconfigType):
+class DictType(CconfigType):
     """Dictionary from a directory, where file names are the keys and their
     content the values.
     """
@@ -265,14 +269,15 @@ class MappingType(CconfigType):
         return mapping
 
     def to_path(self, path, mapping):
-        os.mkdir(path)
+        if not os.path.isdir(path):
+            os.mkdir(path)
         if mapping is not None:
             for key,value in mapping.items():
+                cconfig_type = self.schema[key]
                 file_path = os.path.join(path, key)
-                to_dir(file_path, value, schema=self.schema)
-
+                cconfig_type.to_path(file_path, value)
 
 
 from . import from_dir, to_dir
 
-default_cconfig_type = StrCconfigType()
+default_cconfig_type = StrType()
