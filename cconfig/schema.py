@@ -263,9 +263,10 @@ class MappingType(CconfigType):
     def from_path(self, path):
         mapping = {}
         for key in glob.glob1(path, '*'):
+            cconfig_type = self.schema[key]
             file_path = os.path.join(path, key)
-            o = from_dir(file_path, schema=self.schema)
-            mapping[key] = o
+            value = cconfig_type.from_path(file_path)
+            mapping[key] = value
         return mapping
 
     def to_path(self, path, mapping):
