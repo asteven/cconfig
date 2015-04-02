@@ -111,6 +111,9 @@ class CconfigType(object):
             # error ignored
             pass
 
+    def from_schema(self):
+        return None
+
 
 class BoolType(CconfigType):
     _type = bool
@@ -170,6 +173,9 @@ class ListType(CconfigType):
     """
     _type = list
 
+    def from_schema(self):
+        return []
+
     def from_path(self, path):
         value = self._read(path)
         if value:
@@ -190,6 +196,9 @@ class ListDirType(CconfigType):
     """
     _type = 'listdir'
 
+    def from_schema(self):
+        return []
+
     def from_path(self, path):
         try:
             return os.listdir(path)
@@ -206,6 +215,12 @@ class DictType(CconfigType):
     """
     _type = dict
 
+    def from_schema(self):
+        _dict = { key: cconfig_type.from_schema()
+            for key,cconfig_type in self.schema.items()
+        }
+        return _dict
+
     def from_path(self, path):
         return from_dir(path, schema=self.schema)
 
@@ -219,6 +234,9 @@ class CollectionType(CconfigType):
     cconfig object.
     """
     _type = 'collection'
+
+    def from_schema(self):
+        return []
 
     def from_path(self, path):
         collection = []
@@ -260,6 +278,13 @@ class MappingType(CconfigType):
     """
     _type = 'mapping'
 
+    def from_schema(self):
+        print('from_schema')
+        mapping = { key: cconfig_type.from_schema()
+            for key,cconfig_type in self.schema.items()
+        }
+        return mapping
+
     def from_path(self, path):
         mapping = {}
         for key in glob.glob1(path, '*'):
@@ -279,6 +304,6 @@ class MappingType(CconfigType):
                 cconfig_type.to_path(file_path, value)
 
 
-from . import from_dir, to_dir
+from . import from_schema, from_dir, to_dir
 
 default_cconfig_type = StrType()

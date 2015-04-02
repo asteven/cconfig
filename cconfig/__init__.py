@@ -33,9 +33,21 @@ def from_schema(schema, obj=None, keys=None):
     """Create a new empty object from the given schema.
     """
     log.debug('Creating cconfig from schema')
-    # whatever dir that does not exist
-    base_path = tempfile.mktemp(prefix='cconfig.')
-    return from_dir(base_path, obj=obj, schema=schema, keys=keys)
+    _obj = obj or {}
+    # if the user has given a list of keys, only work with those
+    # otherwise use all keys in the schema or all keys in base_path.
+    if keys:
+        candidates = keys
+    elif schema:
+        candidates = schema.keys()
+    for key in candidates:
+        if schema:
+            cconfig_type = schema[key]
+        else:
+            cconfig_type = default_cconfig_type
+        _obj[key] = cconfig_type.from_schema()
+        log.debug('< {0} = {1} {2}'.format(key, _obj[key], cconfig_type))
+    return _obj
 
 
 def from_dir(base_path, obj=None, schema=None, keys=None):
