@@ -279,7 +279,6 @@ class MappingType(CconfigType):
     _type = 'mapping'
 
     def from_schema(self):
-        print('from_schema')
         mapping = { key: cconfig_type.from_schema()
             for key,cconfig_type in self.schema.items()
         }
