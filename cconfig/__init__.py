@@ -35,7 +35,7 @@ def from_schema(schema, obj=None, keys=None):
     log.debug('Creating cconfig from schema')
     _obj = obj or {}
     # if the user has given a list of keys, only work with those
-    # otherwise use all keys in the schema or all keys in base_path.
+    # otherwise use all keys in the schema.
     if keys:
         candidates = keys
     elif schema:
