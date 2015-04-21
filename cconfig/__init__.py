@@ -80,15 +80,13 @@ def to_dir(base_path, obj, schema=None, keys=None):
         os.mkdir(base_path)
     log.debug('Saving cconfig to: {0}'.format(base_path))
     # if the user has given a list of keys, only work with those
-    # otherwise use all keys in the schema or given object.
+    # otherwise use all keys in given object.
     if keys:
         candidates = keys
-    elif schema:
-        candidates = schema.keys()
     else:
         candidates = obj.keys()
     for key in candidates:
-        if schema:
+        if schema and key in schema:
             cconfig_type = schema[key]
         else:
             cconfig_type = default_cconfig_type
