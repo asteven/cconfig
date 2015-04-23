@@ -20,7 +20,6 @@ import collections
 import tempfile
 import shutil
 import logging
-log = logging.getLogger(__name__)
 
 
 class Error(Exception):
@@ -32,6 +31,7 @@ class Error(Exception):
 def from_schema(schema, obj=None, keys=None):
     """Create a new empty object from the given schema.
     """
+    log = logging.getLogger(__name__)
     log.debug('Creating cconfig from schema')
     _obj = obj or {}
     # if the user has given a list of keys, only work with those
@@ -46,12 +46,13 @@ def from_schema(schema, obj=None, keys=None):
         else:
             cconfig_type = default_cconfig_type
         _obj[key] = cconfig_type.from_schema()
-        log.debug('< {0} = {1} {2}'.format(key, _obj[key], cconfig_type))
+        log.debug('< %s = %s %s', key, _obj[key], cconfig_type)
     return _obj
 
 
 def from_dir(base_path, obj=None, schema=None, keys=None):
-    log.debug('Loading cconfig from: {0}'.format(base_path))
+    log = logging.getLogger(__name__)
+    log.debug('Loading cconfig from: %s', base_path)
     _obj = obj or {}
     # if the user has given a list of keys, only work with those
     # otherwise use all keys in the schema or all keys in base_path.
@@ -71,14 +72,15 @@ def from_dir(base_path, obj=None, schema=None, keys=None):
             cconfig_type = default_cconfig_type
         path = os.path.join(base_path, key)
         _obj[key] = cconfig_type.from_path(path)
-        log.debug('< {0} {1} = {2} {3}'.format(path, key, _obj[key], cconfig_type))
+        log.debug('< %s %s = %s %s', path, key, _obj[key], cconfig_type)
     return _obj
 
 
 def to_dir(base_path, obj, schema=None, keys=None):
+    log = logging.getLogger(__name__)
+    log.debug('Saving cconfig to: %s', base_path)
     if not os.path.isdir(base_path):
         os.mkdir(base_path)
-    log.debug('Saving cconfig to: {0}'.format(base_path))
     # if the user has given a list of keys, only work with those
     # otherwise use all keys in given object.
     if keys:
@@ -92,7 +94,7 @@ def to_dir(base_path, obj, schema=None, keys=None):
             cconfig_type = default_cconfig_type
         path = os.path.join(base_path, key)
         value = obj.get(key, None)
-        log.debug('> {0} {1} = {2} {3}'.format(path, key, value, cconfig_type))
+        log.debug('> %s %s = %s %s', path, key, value, cconfig_type)
         cconfig_type.to_path(path, value)
 
 
@@ -122,7 +124,6 @@ class BoundDict(collections.MutableMapping):
         """Delegate access to attributes which are not our own to the
         wrapped object.
         """
-        log.debug('__getattr__: {0}'.format(name))
         return getattr(self._obj, name)
 
 
