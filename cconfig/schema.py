@@ -222,11 +222,17 @@ class DictType(CconfigType):
         return _dict
 
     def from_path(self, path):
-        return from_dir(path, schema=self.schema)
+        if len(self.schema.keys()):
+            return from_dir(path, schema=self.schema)
+        else:
+            return from_dir(path)
 
     def to_path(self, path, value):
         if value is not None:
-            to_dir(path, value, schema=self.schema)
+            if len(self.schema.keys()):
+                to_dir(path, value, schema=self.schema)
+            else:
+                to_dir(path, value)
 
 
 class CollectionType(CconfigType):
