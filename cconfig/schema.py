@@ -185,9 +185,7 @@ class ListType(CconfigType):
 
     def to_path(self, path, value):
         if value is not None:
-            if not isinstance(value, collections.MutableSequence):
-                value = []
-            # value is a list, save as newline delimited string
+            # value is a iterable, save as newline delimited string
             self._write(path, '\n'.join(value))
 
 

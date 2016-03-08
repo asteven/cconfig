@@ -23,12 +23,18 @@ def main(path):
             ('state', str),
         )),
         ('state', str),
+        ('tags', dict, (
+            ('exclude', list),
+            ('include', list),
+            ('only', list),
+        )),
     )
 
     schema = cconfig.Schema(schema_decl)
     obj = cconfig.from_schema(schema)
     print(obj)
     obj['changed'] = True
+    obj['tags'] = {'exclude': ['a', 'b'], 'include': set(('c', 'd')), 'only': ('x', 'y')}
     print('changed: ', obj['changed'])
     print('state: ', obj['state'])
     print('parameter[\'state\']: ', obj['parameter']['state'])
