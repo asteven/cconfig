@@ -184,7 +184,7 @@ class ListType(CconfigType):
             return []
 
     def to_path(self, path, value):
-        if value is not None:
+        if value:
             # value is a iterable, save as newline delimited string
             self._write(path, '\n'.join(value))
 
